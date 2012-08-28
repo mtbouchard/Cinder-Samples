@@ -43,13 +43,8 @@ void MeshLibApp::setup()
 
 	mMayaCam.setCurrentCam( mCam );
 
+	mTexture = gl::Texture( loadImage( loadAsset("earth.png") ) );
 	mMesh = MeshLibrary::createSphere();
-
-	gl::Texture::Format fmt;
-	//fmt.enableMipmapping();
-	//fmt.setMinFilter( GL_LINEAR_MIPMAP_LINEAR );
-
-	mTexture = gl::Texture( loadImage( loadAsset("earth.png") ), fmt );
 }
 
 void MeshLibApp::update()
@@ -102,6 +97,8 @@ void MeshLibApp::mouseDrag( MouseEvent event )
 
 void MeshLibApp::keyDown( KeyEvent event )
 {
+	TriMesh mesh;
+
 	switch( event.getCode() ) {
 	case KeyEvent::KEY_ESCAPE:
 		quit();
@@ -140,8 +137,8 @@ void MeshLibApp::render()
 	gl::disableWireframe();
 
 	for(int i=-10;i<=10;++i) {
-		gl::drawLine( Vec3f(i, 0, -10), Vec3f(i, 0, 10) ); 
-		gl::drawLine( Vec3f(-10, 0, i), Vec3f(10, 0, i) );
+		gl::drawLine( Vec3f((float)i, 0, -10), Vec3f((float)i, 0, 10) ); 
+		gl::drawLine( Vec3f(-10, 0, (float)i), Vec3f(10, 0, (float)i) );
 	}
 	
 	mTexture.enableAndBind();

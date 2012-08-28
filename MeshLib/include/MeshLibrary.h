@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cinder/TriMesh.h"
 #include "cinder/Vector.h"
 #include "cinder/gl/Vbo.h"
 
