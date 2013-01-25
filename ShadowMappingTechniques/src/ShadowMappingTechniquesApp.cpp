@@ -55,9 +55,6 @@ public:
 private:
 	//! renders all objects in our scene
 	void renderScene();
-
-	//! renders a grid of lines at the origin
-	void drawGrid(float size=100.0f, float step=10.0f);
 private:
 	// camera
 	CameraPersp		mCamera;
@@ -66,9 +63,6 @@ private:
 	// mesh
 	TriMesh			mTriMeshTree;
 	TriMesh			mTriMeshWindmill;
-
-	// shader
-	gl::GlslProg	mShaderPhong;
 
 	// shadow
 	ExponentialShadowMap	mShadowMap;
@@ -88,12 +82,6 @@ void ShadowMappingTechniquesApp::setup()
 	try { 
 		mTriMeshTree.read( loadAsset("tree.msh") );
 		mTriMeshWindmill.read( loadAsset("windmill.msh") );
-
-		//ObjLoader ldr( loadAsset("windmill.obj") );
-		//ldr.load( &mTriMeshWindmill, true, false );
-		//mTriMeshWindmill.write( writeFile( getAssetPath("") / "windmill.msh" ) );
-
-		mShaderPhong = gl::GlslProg( loadAsset("phong_vert.glsl"), loadAsset("phong_frag.glsl") );
 	}
 	catch(...) {}
 
@@ -118,20 +106,19 @@ void ShadowMappingTechniquesApp::draw()
 	renderScene();
 	mShadowMap.unbindDepth();
 
+	// render scene using shadow map
 	gl::pushMatrices();
 	gl::setMatrices( mCamera );
 
-	// render scene using shadow map
-	//mShaderPhong.bind();
 	mShadowMap.bindShadow();
 	renderScene();
 	mShadowMap.unbindShadow();
-	//mShaderPhong.unbind();
-
-	gl::disableDepthWrite();
-	gl::disableDepthRead();
 
 	gl::popMatrices();
+
+	// restore render states
+	gl::disableDepthWrite();
+	gl::disableDepthRead();
 }
 
 void ShadowMappingTechniquesApp::resize( ResizeEvent event )
@@ -200,15 +187,6 @@ void ShadowMappingTechniquesApp::renderScene()
 
 	gl::color( Color(0.5f, 0.5f, 0.5f) );
 	gl::drawCube( Vec3f::zero(), Vec3f(250, 1, 250) );
-}
-
-void ShadowMappingTechniquesApp::drawGrid(float size, float step)
-{
-	gl::color( Colorf(0.2f, 0.2f, 0.2f) );
-	for(float i=-size;i<=size;i+=step) {
-		gl::drawLine( Vec3f(i, 0.0f, -size), Vec3f(i, 0.0f, size) );
-		gl::drawLine( Vec3f(-size, 0.0f, i), Vec3f(size, 0.0f, i) );
-	}
 }
 
 CINDER_APP_BASIC( ShadowMappingTechniquesApp, RendererGl )
