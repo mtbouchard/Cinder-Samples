@@ -50,19 +50,19 @@ void ExponentialShadowMap::setup()
 void ExponentialShadowMap::update( const CameraPersp &cam )
 {	
 	double t = 0.1 * getElapsedSeconds();
-	mLight->lookAt( Vec3f( 70 * sin( t ), 100, 70 * cos( t ) ), Vec3f::zero() );
+	mLight->lookAt( Vec3f( 70 * (float) sin( t ), 70, 70 * (float) cos( t ) ), Vec3f::zero() );
 
 	mLight->update( cam );
 	mShadowMatrix = mLight->getShadowTransformationMatrix( cam );
 }
 
-void ExponentialShadowMap::draw()
+void ExponentialShadowMap::drawDepth()
 {
 	int w = getWindowHeight();
 	int h = getWindowWidth();
 
 	gl::color( Color::white() );
-	gl::draw( mFboDepth.getTexture(), Rectf(0, 256, 256, 0) );
+	gl::draw( mFboDepth.getTexture(), Rectf(0, 512, 512, 0) );
 }
 
 void ExponentialShadowMap::drawLight()
@@ -102,15 +102,15 @@ void ExponentialShadowMap::unbindDepth()
 	// blur pass
 	if( mIsBlurEnabled ) 
 	{
+		gl::setMatricesWindow( mFboDepth.getSize() );
+
 		mFboBlur.bindFramebuffer();
 		{
 			mFboDepth.bindTexture();
 			{
-				gl::setMatricesWindow( mFboDepth.getSize() );
-
 				mShaderBlur.bind();
 				mShaderBlur.uniform( "tex0", 0 );
-				mShaderBlur.uniform( "offset", Vec2f( 0.2f / SHADOW_MAP_RESOLUTION, 0.0f ) );
+				mShaderBlur.uniform( "offset", Vec2f( 1.0f / SHADOW_MAP_RESOLUTION, 0.0f ) );
 
 				gl::clear();
 				gl::drawSolidRect( mFboBlur.getBounds() );
@@ -123,7 +123,7 @@ void ExponentialShadowMap::unbindDepth()
 		{
 			mFboBlur.bindTexture();
 			{
-				mShaderBlur.uniform( "offset", Vec2f( 0.0f, 0.2f / SHADOW_MAP_RESOLUTION ) );
+				mShaderBlur.uniform( "offset", Vec2f( 0.0f, 1.0f / SHADOW_MAP_RESOLUTION ) );
 
 				gl::clear();
 				gl::drawSolidRect( mFboDepth.getBounds() );
@@ -219,7 +219,17 @@ std::string ExponentialShadowMap::getBlurFS() const
 		"\n"
 		"void main()\n"
 		"{\n"
-		"	vec3 sum = vec3( 0.0, 0.0, 0.0 );\n"	
+		"	vec3 sum = vec3( 0.0, 0.0, 0.0 );\n"
+
+		"	sum += texture2D( tex0, gl_TexCoord[0].st -  3.0 * offset ).rgb * 0.006;\n"
+		"	sum += texture2D( tex0, gl_TexCoord[0].st -  2.0 * offset ).rgb * 0.061;\n"
+		"	sum += texture2D( tex0, gl_TexCoord[0].st -        offset ).rgb * 0.242;\n"
+		"	sum += texture2D( tex0, gl_TexCoord[0].st                 ).rgb * 0.383;\n"
+		"	sum += texture2D( tex0, gl_TexCoord[0].st +        offset ).rgb * 0.242;\n"
+		"	sum += texture2D( tex0, gl_TexCoord[0].st +  2.0 * offset ).rgb * 0.061;\n"
+		"	sum += texture2D( tex0, gl_TexCoord[0].st +  3.0 * offset ).rgb * 0.006;\n"
+		
+		/*
 		"	sum += texture2D( tex0, gl_TexCoord[0].st - 10.0 * offset ).rgb * 0.009167927656011385;\n"
 		"	sum += texture2D( tex0, gl_TexCoord[0].st -  9.0 * offset ).rgb * 0.014053461291849008;\n"
 		"	sum += texture2D( tex0, gl_TexCoord[0].st -  8.0 * offset ).rgb * 0.020595286319257878;\n"
@@ -241,6 +251,8 @@ std::string ExponentialShadowMap::getBlurFS() const
 		"	sum += texture2D( tex0, gl_TexCoord[0].st +  8.0 * offset ).rgb * 0.020595286319257878;\n"
 		"	sum += texture2D( tex0, gl_TexCoord[0].st +  9.0 * offset ).rgb * 0.014053461291849008;\n"
 		"	sum += texture2D( tex0, gl_TexCoord[0].st + 10.0 * offset ).rgb * 0.009167927656011385;\n"
+		*/
+
 		"\n"
 		"	gl_FragColor.rgb = sum;\n"
 		"	gl_FragColor.a = 1.0;\n"

@@ -43,7 +43,7 @@ public:
 	void update();
 	void draw();
 	
-	void resize( ResizeEvent event );
+	void resize();
 	
 	void mouseMove( MouseEvent event );	
 	void mouseDown( MouseEvent event );	
@@ -66,6 +66,7 @@ private:
 
 	// shadow
 	ExponentialShadowMap	mShadowMap;
+	//VarianceShadowMap		mShadowMap;
 };
 
 void ShadowMappingTechniquesApp::prepareSettings(Settings *settings)
@@ -119,11 +120,13 @@ void ShadowMappingTechniquesApp::draw()
 	// restore render states
 	gl::disableDepthWrite();
 	gl::disableDepthRead();
+
+	//mShadowMap.drawDepth();
 }
 
-void ShadowMappingTechniquesApp::resize( ResizeEvent event )
+void ShadowMappingTechniquesApp::resize()
 {
-	mCamera.setAspectRatio( event.getAspectRatio() );
+	mCamera.setAspectRatio( getWindowAspectRatio() );
 }
 
 void ShadowMappingTechniquesApp::mouseMove( MouseEvent event )

@@ -14,9 +14,9 @@ public:
 
 	void	setup();
 	void	update(  const ci::CameraPersp &cam );
-	void	draw();
 
 	void	drawLight();
+	void	drawDepth();
 
 	void	bindDepth();
 	void	unbindDepth();
@@ -40,7 +40,7 @@ private:
 	std::string	getShadowVS() const;
 	std::string	getShadowFS() const;
 public:
-	static const int SHADOW_MAP_RESOLUTION = 2048;
+	static const int SHADOW_MAP_RESOLUTION = 1024;
 private:
 	bool				mIsBlurEnabled;
 

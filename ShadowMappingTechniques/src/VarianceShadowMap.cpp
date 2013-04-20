@@ -225,7 +225,7 @@ std::string VarianceShadowMap::getShadowFS() const
 		"{\n"
 		"	// calculate shadow factor\n"
 		"	vec4 q = (Q / Q.w) * 0.5 + 0.5;\n"
-		//"	vec4 q = Q * 0.5 + 0.5;\n"
+		"\n"
 		"	float shadow = chebyshevUpperBound( q.z, q.xy );\n"
 		"	shadow = 0.5 * shadow + 0.5;\n"
 		"\n"		
