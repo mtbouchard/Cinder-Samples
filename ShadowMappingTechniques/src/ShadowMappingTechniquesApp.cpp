@@ -27,6 +27,7 @@
 #include "cinder/app/AppBasic.h"
 #include "cinder/gl/gl.h"
 #include "cinder/gl/GlslProg.h"
+#include "cinder/gl/Vbo.h"
 
 #include "ExponentialShadowMap.h"
 #include "VarianceShadowMap.h"
@@ -55,44 +56,51 @@ public:
 private:
 	//! renders all objects in our scene
 	void renderScene();
+	//
+	ShadowMap& getShadowMap() { return mExponentialShadowMap; }
 private:
 	// camera
 	CameraPersp		mCamera;
 	MayaCamUI		mMayaCam;
 
 	// mesh
-	TriMesh			mTriMeshTree;
-	TriMesh			mTriMeshWindmill;
+	gl::VboMesh		mMesh;
 
 	// shadow
-	ExponentialShadowMap	mShadowMap;
-	//VarianceShadowMap		mShadowMap;
+	ExponentialShadowMap	mExponentialShadowMap;
+	VarianceShadowMap		mVarianceShadowMap;
 };
 
 void ShadowMappingTechniquesApp::prepareSettings(Settings *settings)
 {
-	settings->setTitle("Cinder Sample");
+	settings->setTitle("Shadow Mapping Techniques");
+	settings->setWindowSize( 1024, 768 );
 }
 
 void ShadowMappingTechniquesApp::setup()
 {
-	mCamera.setEyePoint( Vec3f(25, 50, -100) );
+	mCamera.setEyePoint( Vec3f(25, 50, -70) );
 	mCamera.setCenterOfInterestPoint( Vec3f(0, 0, 0) );
 
-	//
+	// 3D model generously supplied by AngelStudios,
+	//  see: http://www.turbosquid.com/3d-models/cityscape-old-houses-obj-free/738904
 	try { 
-		mTriMeshTree.read( loadAsset("tree.msh") );
-		mTriMeshWindmill.read( loadAsset("windmill.msh") );
+		TriMesh mesh;
+		mesh.read( loadAsset("city.msh") );
+
+		mMesh = gl::VboMesh(mesh);
 	}
 	catch(...) {}
 
 	//
-	mShadowMap.setup();
+	mExponentialShadowMap.setup();
+	mVarianceShadowMap.setup();
 }
 
 void ShadowMappingTechniquesApp::update()
 {
-	mShadowMap.update( mCamera );
+	mExponentialShadowMap.update( mCamera );
+	mVarianceShadowMap.update( mCamera );
 }
 
 void ShadowMappingTechniquesApp::draw()
@@ -103,17 +111,19 @@ void ShadowMappingTechniquesApp::draw()
 	gl::enableDepthWrite();
 
 	// render shadow map
-	mShadowMap.bindDepth();
+	getShadowMap().bindDepth();
 	renderScene();
-	mShadowMap.unbindDepth();
+	getShadowMap().unbindDepth();
 
 	// render scene using shadow map
 	gl::pushMatrices();
 	gl::setMatrices( mCamera );
 
-	mShadowMap.bindShadow();
+	getShadowMap().bindShadow();
 	renderScene();
-	mShadowMap.unbindShadow();
+	getShadowMap().unbindShadow();
+
+	getShadowMap().drawLight();
 
 	gl::popMatrices();
 
@@ -121,7 +131,7 @@ void ShadowMappingTechniquesApp::draw()
 	gl::disableDepthWrite();
 	gl::disableDepthRead();
 
-	//mShadowMap.drawDepth();
+	getShadowMap().drawDepth();
 }
 
 void ShadowMappingTechniquesApp::resize()
@@ -157,7 +167,7 @@ void ShadowMappingTechniquesApp::keyDown( KeyEvent event )
 		quit();
 		break;
 	case KeyEvent::KEY_b:		
-		mShadowMap.enableBlur( ! mShadowMap.isBlurEnabled() );
+		getShadowMap().enableBlur( ! getShadowMap().isBlurEnabled() );
 		break;
 	case KeyEvent::KEY_f:
 		setFullScreen( ! isFullScreen() );
@@ -177,19 +187,10 @@ void ShadowMappingTechniquesApp::renderScene()
 	gl::color( Color::white() );
 
 	gl::pushModelView();
-	gl::translate( -15, 0, 0 );
-	gl::draw( mTriMeshTree );
+	gl::translate( -15, 0, 10 );
+	gl::scale( 0.001f, 0.001f, 0.001f );
+	gl::draw( mMesh );
 	gl::popModelView();
-
-	gl::pushModelView();
-	gl::translate( 15, 0, 0 );
-	gl::rotate( Vec3f::yAxis() * 160.0f );
-	gl::scale( 0.025f, 0.025f, 0.025f );
-	gl::draw( mTriMeshWindmill );
-	gl::popModelView();
-
-	gl::color( Color(0.5f, 0.5f, 0.5f) );
-	gl::drawCube( Vec3f::zero(), Vec3f(250, 1, 250) );
 }
 
 CINDER_APP_BASIC( ShadowMappingTechniquesApp, RendererGl )

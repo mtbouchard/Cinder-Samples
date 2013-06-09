@@ -51,27 +51,11 @@ void VarianceShadowMap::setup()
 
 void VarianceShadowMap::update( const CameraPersp &cam )
 {	
-	double t = 0.1 * getElapsedSeconds();
-	mLight->lookAt( Vec3f( 100 * sin( t ), 100, 100 * cos( t ) ), Vec3f::zero() );
+	float t = 0.1f * float( getElapsedSeconds() );
+	mLight->lookAt( Vec3f( 60 * sinf( t ), 60, 60 * cosf( t ) ), Vec3f::zero() );
 
 	mLight->update( cam );
 	mShadowMatrix = mLight->getShadowTransformationMatrix( cam );
-}
-
-void VarianceShadowMap::draw()
-{
-	int w = getWindowHeight();
-	int h = getWindowWidth();
-
-	gl::color( Color::white() );
-	gl::draw( mFboDepth.getTexture(), Rectf(0, 256, 256, 0) );
-}
-
-void VarianceShadowMap::drawLight()
-{
-	gl::color( Color::white() );
-	gl::drawSphere( mLight->getPosition(), 2.0f, 20 );
-	gl::drawVector( mLight->getPosition(), Vec3f::zero(), 0.5f, 0.05f );
 }
 
 void VarianceShadowMap::bindDepth()

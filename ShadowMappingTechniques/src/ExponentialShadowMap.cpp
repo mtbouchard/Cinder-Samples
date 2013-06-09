@@ -49,27 +49,11 @@ void ExponentialShadowMap::setup()
 
 void ExponentialShadowMap::update( const CameraPersp &cam )
 {	
-	double t = 0.1 * getElapsedSeconds();
-	mLight->lookAt( Vec3f( 70 * (float) sin( t ), 70, 70 * (float) cos( t ) ), Vec3f::zero() );
+	float t = 0.1f * float( getElapsedSeconds() );
+	mLight->lookAt( Vec3f( 60 * sinf( t ), 60, 60 * cosf( t ) ), Vec3f::zero() );
 
 	mLight->update( cam );
 	mShadowMatrix = mLight->getShadowTransformationMatrix( cam );
-}
-
-void ExponentialShadowMap::drawDepth()
-{
-	int w = getWindowHeight();
-	int h = getWindowWidth();
-
-	gl::color( Color::white() );
-	gl::draw( mFboDepth.getTexture(), Rectf(0, 512, 512, 0) );
-}
-
-void ExponentialShadowMap::drawLight()
-{
-	gl::color( Color::white() );
-	gl::drawSphere( mLight->getPosition(), 2.0f, 20 );
-	gl::drawVector( mLight->getPosition(), Vec3f::zero(), 0.5f, 0.05f );
 }
 
 void ExponentialShadowMap::bindDepth()

@@ -74,6 +74,8 @@ class FrustumCullingApp
 	bool			mDrawPreciseBoundingBoxes;
 	bool			mDrawWireframes;
 	bool			mIsHelpVisible;
+
+	bool			mEnablePreZPass;
 	
 	//! assets
 	ci::TriMesh		mTriMesh;
@@ -118,6 +120,8 @@ void FrustumCullingApp::setup()
 	mDrawPreciseBoundingBoxes = false;
 	mDrawWireframes = false;
 	mIsHelpVisible = true;
+
+	mEnablePreZPass = false;
 
 	//! render help texture
 	renderHelpToTexture();
@@ -232,6 +236,22 @@ void FrustumCullingApp::draw()
 		mShader.uniform("numLights", 1);
 	}
 
+	if(mEnablePreZPass) {
+		glEnable(GL_DEPTH_TEST);  // We want depth test !
+		glDepthFunc(GL_LESS);     // We want to get the nearest pixels
+		glColorMask(0,0,0,0);     // Disable color, it's useless, we only want depth.
+		glDepthMask(GL_TRUE);     // Ask z writing
+
+		for(int i=0;i<NUM_OBJECTS;++i) 
+			mObjects[i]->draw();
+
+		// real render
+		glEnable(GL_DEPTH_TEST);  // We still want depth test
+		glDepthFunc(GL_LEQUAL);   // EQUAL should work, too. (Only draw pixels if they are the closest ones)
+		glColorMask(1,1,1,1);     // We want color this time
+		glDepthMask(GL_FALSE);  
+	}
+
 	// draw hearts
 	for(int i=0;i<NUM_OBJECTS;++i) 
 		mObjects[i]->draw();
@@ -339,6 +359,9 @@ void FrustumCullingApp::keyDown( KeyEvent event )
 	case KeyEvent::KEY_w:
 		mDrawWireframes = !mDrawWireframes;
 		break;
+	case KeyEvent::KEY_p:
+		mEnablePreZPass = !mEnablePreZPass;
+		break;
 	}
 	
 	// update info
@@ -405,6 +428,9 @@ void FrustumCullingApp::renderHelpToTexture()
 
 	if(mDrawPreciseBoundingBoxes) layout.addLine("(B)+(Shift) Toggle precise bounding boxes (currently ON)");
 	else  layout.addLine("(B)+(Shift) Toggle precise bounding boxes (currently OFF)");
+
+	if(mEnablePreZPass) layout.addLine("(P) Toggle pre-depth pass (currently ON)");
+	else  layout.addLine("(P) Toggle pre-depth pass (currently OFF)");
 
 	if( gl::isVerticalSyncEnabled() ) layout.addLine("(V) Toggle vertical sync (currently ON)");
 	else  layout.addLine("(V) Toggle vertical sync (currently OFF)");

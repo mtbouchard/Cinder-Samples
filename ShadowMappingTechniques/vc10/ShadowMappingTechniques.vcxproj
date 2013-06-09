@@ -111,6 +111,7 @@
   <ItemGroup>
     <ClInclude Include="..\include\Resources.h" />
     <ClInclude Include="..\src\ExponentialShadowMap.h" />
+    <ClInclude Include="..\src\ShadowMap.h" />
     <ClInclude Include="..\src\VarianceShadowMap.h" />
   </ItemGroup>
   <ItemGroup>
