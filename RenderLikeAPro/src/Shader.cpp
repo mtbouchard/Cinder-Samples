@@ -1,4 +1,6 @@
 #include "Shader.h"
+
+#include "cinder/Utilities.h"
 #include "cinder/app/AppBasic.h"
 
 #include <boost/algorithm/string.hpp>
@@ -10,12 +12,14 @@ using namespace ph;
 using namespace ph::render;
 
 Shader::Shader(void) :
-	bHasGeometryShader(false)
+	bHasGeometryShader(false),
+	mGlslVersion(0)
 {
 }
 
 Shader::Shader(const std::string& name) :
-	bHasGeometryShader(false)
+	bHasGeometryShader(false),
+	mGlslVersion(0)
 {
 	mVertexFile = name + "_vert.glsl";
 	mFragmentFile = name + "_frag.glsl";
@@ -50,10 +54,17 @@ bool Shader::load()
 
 	// parse source
 	std::string vertexSource = parseShader( path / mVertexFile );
-	//std::string fragmentSource = parseShader( path / mFragmentFile );
+	std::string fragmentSource = parseShader( path / mFragmentFile );
 
+	if(bHasGeometryShader) {
+		std::string geometrySource = parseShader( path / mGeometryFile );
 
-	//std::string geometrySource = parseShader( path / mGeometryFile );
+		mGlslProg = gl::GlslProg( vertexSource.c_str(), fragmentSource.c_str(), geometrySource.c_str(),
+									GL_TRIANGLES, GL_TRIANGLE_STRIP, 3); // TODO
+	}
+	else {
+		mGlslProg = gl::GlslProg( vertexSource.c_str(), fragmentSource.c_str() );
+	}
 
 	return true;
 }
@@ -67,14 +78,14 @@ const fs::path& Shader::getPath() const
 	//  1. in assets folder
 	//  2. in assets/shaders folder
 	//  3. next to executable
-	mPath = app::getAssetPath(mVertexFile);
-	if( !mPath.empty() ) return mPath.parent_path();
+	mPath = app::getAssetPath("");
+	if( fs::exists(mPath / mVertexFile) ) return mPath;
 
-	mPath = app::getAssetPath( fs::path("shaders") / mVertexFile );
-	if( !mPath.empty() ) return mPath.parent_path();
+	mPath = app::getAssetPath("") / "shaders";
+	if( fs::exists(mPath / mVertexFile) ) return mPath;
 
-	mPath = app::getAppPath() / mVertexFile;
-	if( fs::exists(mPath) ) return mPath.parent_path();
+	mPath = app::getAppPath();
+	if( fs::exists(mPath / mVertexFile) ) return mPath;
 
 	// not found (throw exception?)
 	mPath.clear();
@@ -87,7 +98,7 @@ std::string Shader::parseShader( const fs::path& path, bool optional, int level 
 
 	if( level > 32 )
 	{
-		// TODO throw exception for cyclic inclusion
+		throw std::exception("Reached the maximum inclusion depth.");
 		return std::string();
 	}
 
@@ -97,18 +108,12 @@ std::string Shader::parseShader( const fs::path& path, bool optional, int level 
 	if( !input.is_open() )
 	{
 		if( optional )
-		{
 			return std::string();
-		}
 
 		if( level == 0 )
-		{
-			throw ci::Exception();	// Shader file not found or can't open it
-		}
+			throw std::exception("Failed to open shader file.");
 		else
-		{
-			throw ci::Exception();	// Shader include file not found or can't open it
-		}
+			throw std::exception("Failed to open shader include file.");
 
 		return std::string();
 	}
@@ -120,18 +125,51 @@ std::string Shader::parseShader( const fs::path& path, bool optional, int level 
 	while( std::getline( input, line ) )
 	{
 		if( boost::regex_search( line, matches, includeRegexp ) )
-		{
-			output << parseShader( path / matches[1].str(), false, level + 1 );
-		}
+			output << parseShader( path.parent_path() / matches[1].str(), false, level + 1 );
 		else
-		{
 			output << line;
-		}
 
 		output << std::endl;
 	}
 
 	input.close();
 
-	return output.str();
+		// make sure #version is the first line of the shader
+	if( level == 0)
+		return parseVersion( output.str() );
+	else
+		return output.str();
+}
+
+std::string Shader::parseVersion( const std::string& code )
+{
+    static const boost::regex versionRegexp( "^[ ]*#[ ]*version[ ]+([123456789][0123456789][0123456789]).*$" );
+
+	if(code.empty())
+		return std::string();
+       
+    mGlslVersion = 120;  
+
+    std::stringstream completeCode( code );
+    std::ostringstream cleanedCode;
+
+    std::string line;
+    boost::smatch matches; 
+    while( std::getline( completeCode, line ) )
+    {
+        if( boost::regex_match( line, matches, versionRegexp ) ) 
+        {
+			unsigned int versionNum = ci::fromString< unsigned int >( matches[1] );	
+            mGlslVersion = std::max( versionNum, mGlslVersion );
+
+            continue;
+        }
+
+        cleanedCode << line << std::endl;
+    }
+	
+    std::stringstream vs;
+    vs << "#version " << mGlslVersion << std::endl << cleanedCode.str();
+
+    return vs.str();
 }

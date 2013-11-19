@@ -1,4 +1,5 @@
 #version 110
+#include "common.inc"
 
 varying vec4		vVertex;
 varying vec3		vNormal;
@@ -7,12 +8,6 @@ varying vec3		vBiTangent;
 
 uniform bool		uHasNormalMap;
 uniform	sampler2D	uNormalMap;
-
-vec2 encode (vec3 n)
-{
-    vec2 enc = normalize(n.xy) * (sqrt(-n.z*0.5+0.5));
-    return (enc*0.5 + 0.5);
-}
 
 void main()
 {		 

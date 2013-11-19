@@ -1,4 +1,5 @@
 #version 120
+#include "common.inc"
 
 const int			MAX_KERNEL_SIZE = 256;
 const float			uRadius = 0.25;
@@ -16,24 +17,6 @@ uniform vec2		uNoiseSize;
 uniform int			uKernelSize;
 uniform vec3		uKernelOffsets[MAX_KERNEL_SIZE];
 
-vec3 decode (in vec2 enc)
-{
-    vec4 nn = vec4(enc, 0, 0) * vec4(2, 2, 0, 0) + vec4(-1, -1, 1, -1);
-    float l = dot(nn.xyz, -nn.xyw);
-    nn.z = l;
-    nn.xy *= sqrt(l);
-    return nn.xyz * 2.0 + vec3(0, 0, -1);
-}
-
-float linearizeDepth(in float depth) {
-	return uProjectionParams.w / (depth - uProjectionParams.z);
-}
-
-vec3 getViewPositionFromLinearDepth(in float depth, in vec2 ndc)
-{
-	return vec3((ndc * depth) / uProjectionParams.xy, depth);
-}
-
 float calculateOcclusion(in mat3 mKernel, in vec3 vOrigin, in float fRadius) 
 {
 	float fOcclusion = 0.0;
@@ -50,7 +33,7 @@ float calculateOcclusion(in mat3 mKernel, in vec3 vOrigin, in float fRadius)
 		
 		//	get sample depth:
 		float fDepth = texture2D( uGBufferDepth, vOffset.xy ).r;
-		float fLinearDepth = linearizeDepth( fDepth );
+		float fLinearDepth = linearizeDepth( fDepth, uProjectionParams );
 		
 		float fRangeCheck = smoothstep(0.0, 1.0, fRadius / abs(vOrigin.z - fLinearDepth));
 		fOcclusion += fRangeCheck * step(fLinearDepth, vSamplePos.z);
@@ -66,9 +49,9 @@ void main()
 
 	// calculate view space fragment position from depth
 	float	fDepth = texture2D( uGBufferDepth, gl_TexCoord[0].st ).r;
-	float	fLinearDepth = linearizeDepth( fDepth );
+	float	fLinearDepth = linearizeDepth( fDepth, uProjectionParams );
 	vec2	vNormalizedCoords = gl_TexCoord[0].st * 2.0 - 1.0;
-	vec3	vPosition = getViewPositionFromLinearDepth( fLinearDepth, vNormalizedCoords );
+	vec3	vPosition = getViewPositionFromLinearDepth( fLinearDepth, vNormalizedCoords, uProjectionParams );
 	
 	// decode view space surface normal
 	vec2	vEncodedNormal = vNormalAndSpecularPower.rg;

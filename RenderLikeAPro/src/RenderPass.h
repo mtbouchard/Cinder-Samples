@@ -28,6 +28,7 @@
 #include "cinder/gl/Texture.h"
 
 #include "Mesh.h"
+#include "Shader.h"
 
 namespace ph { namespace render {
 
@@ -76,16 +77,17 @@ public:
 protected:
 	ci::gl::Fbo&			getFrameBuffer() { return mFrameBuffer; }
 
-	virtual void			loadShader(const ci::DataSourceRef vertex, const ci::DataSourceRef fragment);
-	virtual void			loadShader(const ci::DataSourceRef vertex, const ci::DataSourceRef fragment, 
-								const ci::DataSourceRef geometry, GLint input = 0, GLint output = 4, GLint vertices = 0);
+	virtual void			loadShader(const std::string& name);
+	//virtual void			loadShader(const ci::DataSourceRef vertex, const ci::DataSourceRef fragment);
+	//virtual void			loadShader(const ci::DataSourceRef vertex, const ci::DataSourceRef fragment, 
+	//							const ci::DataSourceRef geometry, GLint input = 0, GLint output = 4, GLint vertices = 0);
 
-	ci::gl::GlslProg		getShader() { return mInputShader; }
+	ci::gl::GlslProg&		getShader() { return mInputShader->getGlslProg(); }
 
 private:
 	std::vector<ci::gl::Texture>	mInputTextures;
 	std::vector<MeshRef>			mInputMeshes;
-	ci::gl::GlslProg				mInputShader;
+	ShaderRef						mInputShader;
 
 	DownScaleSize					mDownScaleSize;
 
@@ -202,9 +204,11 @@ public:
 	RenderPassComposite(void) : 
 		RenderPass(),
 		bShowNormalMap(false)
-	{}
+	{ assert(false); /* not supported */ }
 	RenderPassComposite( const ci::gl::Fbo::Format& format ) : 
-		RenderPass(format) { assert(false); /* not supported */ }
+		RenderPass(format),
+		bShowNormalMap(false)
+	{}
 
 	static RenderPassCompositeRef create();
 
@@ -216,6 +220,28 @@ public:
 
 public:
 	bool bShowNormalMap;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+typedef std::shared_ptr<class RenderPassFXAA> RenderPassFXAARef;
+
+class RenderPassFXAA : public RenderPass
+{
+public:
+	RenderPassFXAA(void) : 
+		RenderPass()
+	{}
+	RenderPassFXAA( const ci::gl::Fbo::Format& format ) : 
+		RenderPass(format) { assert(false); /* not supported */ }
+
+	static RenderPassFXAARef create();
+
+	void resize(int width, int height);
+	void render(const ci::CameraPersp& camera) { assert(false); /* not supported */ }
+	void render();
+
+	void loadShader();
 };
 
 } } // namespace ph::render

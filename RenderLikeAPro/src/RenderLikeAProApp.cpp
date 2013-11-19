@@ -111,8 +111,7 @@ private:
 	render::RenderPassSSAORef			mPassSSAO;
 	render::RenderPassCBFilterRef		mPassCrossBilateralFilter;
 	render::RenderPassCompositeRef		mPassComposite;
-
-	render::ShaderRef					mShader;
+	render::RenderPassFXAARef			mPassFXAA;
 };
 
 void RenderLikeAProApp::prepareSettings(Settings* settings)
@@ -124,9 +123,6 @@ void RenderLikeAProApp::prepareSettings(Settings* settings)
 
 void RenderLikeAProApp::setup()
 {
-	mShader = render::Shader::create("ssao");
-	mShader->load();
-
 	// load mesh file
 	try {
 		fs::path mshFile = getAssetPath("") / "models/leprechaun.msh";
@@ -162,6 +158,9 @@ void RenderLikeAProApp::setup()
 	mPassComposite->setClearColor( Color::black() );
 	mPassComposite->loadShader();
 	mPassComposite->addMesh( mMesh );
+
+	mPassFXAA = render::RenderPassFXAA::create();
+	mPassFXAA->loadShader();
 
 	// create a parameter window, so we can toggle stuff
 	mParams = params::InterfaceGl::create( getWindow(), "Demo", Vec2i(320, 240) );
@@ -300,6 +299,9 @@ void RenderLikeAProApp::draw()
 			// disable our lights
 			mLightAmbient->disable();
 			mLightLantern->disable();
+
+			// perform FXAA pass, which outputs to main buffer
+			mPassFXAA->render();
 		}
 		
 		// 
@@ -313,6 +315,7 @@ void RenderLikeAProApp::draw()
 			//gl::color( Color(1, 0, 0) );
 			gl::draw( mPassSSAO->getTexture(0), Area(w*4/5, h*1/5, w, h*2/5) );
 			gl::draw( mPassCrossBilateralFilter->getTexture(0), Area(w*4/5, h*2/5, w, h*3/5) );
+			gl::draw( mPassComposite->getTexture(0), Area(w*4/5, h*3/5, w, h*4/5) );
 		}
 
 		// render our parameter window
@@ -341,14 +344,14 @@ void RenderLikeAProApp::resize()
 	mPassNormalDepth->resize( w, h );
 	mPassSSAO->resize( w, h );
 	mPassCrossBilateralFilter->resize( w, h );
+	mPassComposite->resize( w, h );
 	
 	// attach output textures to render pass inputs
 	mPassSSAO->attachTexture(0, mPassNormalDepth->getTexture(0));
 	mPassSSAO->attachTexture(1, mPassNormalDepth->getDepthTexture());
-
-	mPassCrossBilateralFilter->attachTexture(0, mPassSSAO->getTexture(0));
-	
+	mPassCrossBilateralFilter->attachTexture(0, mPassSSAO->getTexture(0));	
 	mPassComposite->attachTexture(4, mPassCrossBilateralFilter->getTexture(0));
+	mPassFXAA->attachTexture(0, mPassComposite->getTexture(0));
 }
 
 void RenderLikeAProApp::mouseDown( MouseEvent event )
@@ -379,4 +382,5 @@ void RenderLikeAProApp::keyDown( KeyEvent event )
 	}
 }
 
-CINDER_APP_NATIVE( RenderLikeAProApp, RendererGl )
+// We're going to use FXAA, so there is no need for a multi-sampled main buffer
+CINDER_APP_NATIVE( RenderLikeAProApp, RendererGl(0) )

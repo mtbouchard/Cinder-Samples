@@ -21,6 +21,7 @@
 */
 
 #include "RenderPass.h"
+#include "Shader.h"
 #include "cinder/Rand.h"
 #include "cinder/app/AppBasic.h"
 
@@ -94,6 +95,7 @@ void RenderPass::render()
 	else
 	{
 		gl::pushMatrices();
+		gl::setMatricesWindow( gl::getViewport().getSize(), false );
 	}
 
 	// clear
@@ -101,7 +103,7 @@ void RenderPass::render()
 
 	// bind shader
 	if(mInputShader)
-		mInputShader.bind();
+		mInputShader->getGlslProg().bind();
 
 	// bind textures
 	for(size_t i=0;i<mInputTextures.size();++i)
@@ -115,11 +117,11 @@ void RenderPass::render()
 
 	// full screen pass
 	gl::color( Color::white() );
-	gl::drawSolidRect( mFrameBuffer.getBounds() );
+	gl::drawSolidRect( gl::getViewport() );
 
 	// unbind shader and restore state
 	if(mInputShader)
-		mInputShader.unbind();
+		mInputShader->getGlslProg().unbind();
 
 	gl::popMatrices();
 
@@ -163,7 +165,7 @@ void RenderPass::render(const ci::CameraPersp& camera)
 	gl::setMatrices(camera);
 	{
 		if(mInputShader)
-			mInputShader.bind();
+			mInputShader->getGlslProg().bind();
 
 		//
 		for(size_t i=0;i<mInputTextures.size();++i)
@@ -191,7 +193,7 @@ void RenderPass::render(const ci::CameraPersp& camera)
 		}
 
 		if(mInputShader)
-			mInputShader.unbind();
+			mInputShader->getGlslProg().unbind();
 	}
 	gl::popMatrices();
 
@@ -212,7 +214,7 @@ void RenderPass::attachTexture(uint32_t slot, ci::gl::Texture& texture)
 void RenderPass::detachTexture(uint32_t slot)
 {
 	if(slot < mInputMeshes.size())
-		mInputTextures[slot] = gl::Texture();
+		mInputTextures[slot].reset();
 }
 
 void RenderPass::addMesh(MeshRef mesh)
@@ -227,6 +229,19 @@ void RenderPass::removeMesh(MeshRef mesh)
 		mInputMeshes.erase( itr );
 }
 
+void RenderPass::loadShader(const std::string& name)
+{
+	mInputShader = Shader::create(name);
+
+	try {
+		mInputShader->load();
+	}
+	catch (const std::exception& e) {
+		app::console() << "Error loading shader: " << e.what() << std::endl;
+		mInputShader.reset();
+	}
+}
+/*
 void RenderPass::loadShader(const ci::DataSourceRef vertex, const ci::DataSourceRef fragment)
 {
 	try {
@@ -249,7 +264,7 @@ void RenderPass::loadShader(const ci::DataSourceRef vertex, const ci::DataSource
 		mInputShader = gl::GlslProg();
 	}
 }
-
+*/
 ci::gl::Texture& RenderPass::getTexture(uint32_t slot)
 {
 	//if(mFrameBuffer && slot < mFormat.getNumColorBuffers())
@@ -294,10 +309,8 @@ void RenderPassWireframe::render(const CameraPersp& camera)
 
 void RenderPassWireframe::loadShader()
 {
-	RenderPass::loadShader(	loadAsset("shaders/wireframe_vert.glsl"), 
-							loadAsset("shaders/wireframe_frag.glsl"),
-							loadAsset("shaders/wireframe_geom.glsl"),
-							GL_TRIANGLES, GL_TRIANGLE_STRIP, 3);
+	// TODO set primitves for geometry renderer
+	RenderPass::loadShader("wireframe");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -324,9 +337,8 @@ void RenderPassNormalDepth::render(const CameraPersp& camera)
 }
 
 void RenderPassNormalDepth::loadShader()
-{
-	RenderPass::loadShader(	loadAsset("shaders/normals_depth_vert.glsl"),
-							loadAsset("shaders/normals_depth_frag.glsl"));
+{	
+	RenderPass::loadShader("normals_depth");
 
 	getShader().bind();
 	getShader().uniform( "uNormalMap", 2 );
@@ -377,9 +389,8 @@ void RenderPassSSAO::render(const CameraPersp& camera)
 }
 
 void RenderPassSSAO::loadShader()
-{	
-	RenderPass::loadShader(	loadAsset("shaders/ssao_vert.glsl"),
-							loadAsset("shaders/ssao_frag.glsl") );
+{		
+	RenderPass::loadShader("ssao");
 
 	getShader().bind();
 	getShader().uniform( "uNormalMap", 2 );
@@ -506,24 +517,73 @@ void RenderPassCBFilter::render()
 }
 
 void RenderPassCBFilter::loadShader()
-{
-	RenderPass::loadShader(	loadAsset("shaders/cross_bilateral_filter_vert.glsl"),
-							loadAsset("shaders/cross_bilateral_filter_frag.glsl"));
+{	
+	RenderPass::loadShader("cross_bilateral_filter");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
 
 RenderPassCompositeRef RenderPassComposite::create()
 {
-	return std::make_shared<RenderPassComposite>(); 
+	gl::Fbo::Format fmt;
+	fmt.setSamples(0);
+	fmt.setColorInternalFormat( GL_RGB );
+	fmt.enableColorBuffer( true );
+	fmt.enableDepthBuffer( true );
+
+	return std::make_shared<RenderPassComposite>(fmt); 
 }
 
 void RenderPassComposite::resize(int width, int height)
 {
-	// output to current buffer - don't create frame buffer
+	RenderPass::resize(width, height);
+	setFlipped(true);
 }
 
 void RenderPassComposite::render(const CameraPersp& camera)
+{
+	Area viewport = getFrameBuffer().getBounds();
+
+	float fWidth = 1.0f / viewport.getWidth();
+	float fHeight = 1.0f / viewport.getHeight();
+	Vec2i vOrigin = viewport.getUL();
+
+	Vec4f screenParams = Vec4f( (vOrigin.x * fWidth), (vOrigin.y * fHeight), fWidth, fHeight );
+
+	getShader().bind();
+	getShader().uniform( "uScreenParams", screenParams );
+	getShader().uniform( "bShowNormalMap", bShowNormalMap );
+	getShader().unbind();
+
+	RenderPass::render(camera);
+}
+
+void RenderPassComposite::loadShader()
+{	
+	RenderPass::loadShader("composite");
+	
+	getShader().bind();
+	getShader().uniform( "uDiffuseMap", 0 );
+	getShader().uniform( "uSpecularMap", 1 );
+	getShader().uniform( "uNormalMap", 2 );
+	getShader().uniform( "uEmissiveMap", 3 );
+	getShader().uniform( "uSSAOMap", 4 );
+	getShader().unbind();
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+RenderPassFXAARef RenderPassFXAA::create()
+{
+	return std::make_shared<RenderPassFXAA>(); 
+}
+
+void RenderPassFXAA::resize(int width, int height)
+{
+	// output to current buffer - don't create frame buffer
+}
+
+void RenderPassFXAA::render()
 {
 	Area viewport = gl::getViewport();
 
@@ -535,27 +595,14 @@ void RenderPassComposite::render(const CameraPersp& camera)
 
 	getShader().bind();
 	getShader().uniform( "uScreenParams", screenParams );
-	//getShader().uniform( "bUseDiffuseMap", bUseDiffuseMap );
-	//getShader().uniform( "bUseSpecularMap", bUseSpecularMap );
-	//getShader().uniform( "bUseNormalMap", bUseNormalMap );
-	//getShader().uniform( "bUseEmissiveMap", bUseEmissiveMap );
-	getShader().uniform( "bShowNormalMap", bShowNormalMap );
+	getShader().uniform( "uTextureMap", 0 );
 	getShader().unbind();
 
-	RenderPass::render(camera);
+	RenderPass::render();
 }
 
-void RenderPassComposite::loadShader()
-{
-	RenderPass::loadShader(	loadAsset("shaders/composite_vert.glsl"),
-							loadAsset("shaders/composite_frag.glsl"));
-	
-	getShader().bind();
-	getShader().uniform( "uDiffuseMap", 0 );
-	getShader().uniform( "uSpecularMap", 1 );
-	getShader().uniform( "uNormalMap", 2 );
-	getShader().uniform( "uEmissiveMap", 3 );
-	getShader().uniform( "uSSAOMap", 4 );
-	getShader().unbind();
+void RenderPassFXAA::loadShader()
+{	
+	RenderPass::loadShader("fxaa");
 }
 

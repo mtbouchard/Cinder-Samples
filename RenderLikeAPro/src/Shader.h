@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cinder/Filesystem.h"
+#include "cinder/gl/GlslProg.h"
 
 namespace ph { namespace render {
 
@@ -16,12 +17,15 @@ public:
 	static ShaderRef		create();
 	static ShaderRef		create( const std::string& name );
 
+	const ci::fs::path&		getPath() const;
+
 	bool					load();
 
-	const ci::fs::path&		getPath() const;
+	ci::gl::GlslProg&		getGlslProg() { return mGlslProg; }
 
 protected:
 	std::string parseShader( const ci::fs::path& path, bool optional = true, int level = 0 );
+	std::string parseVersion( const std::string& code );
 
 private:
 	std::string		mVertexFile;
@@ -31,6 +35,9 @@ private:
 	bool			bHasGeometryShader;
 	
 	mutable ci::fs::path	mPath;
+
+	unsigned int			mGlslVersion;
+	ci::gl::GlslProg		mGlslProg;
 };
 
 } } // namespace ph::render
