@@ -68,7 +68,7 @@ void RenderPass::resize(int width, int height)
 	mInputTextures.clear();
 
 	// create the frame buffer
-	mFrameBuffer = gl::Fbo();
+	mFrameBuffer.reset();
 	mFrameBuffer = gl::Fbo( width >> mDownScaleSize, height >> mDownScaleSize, mFormat );
 }
 
