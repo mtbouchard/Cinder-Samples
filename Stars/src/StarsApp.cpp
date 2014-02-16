@@ -130,6 +130,8 @@ protected:
 	shared_ptr<ISoundEngine>	mSoundEngine;
 	shared_ptr<ISound>			mSound;
 	shared_ptr<ISound>			mMusic;
+	double						mMusicDelay; // time in seconds between each track
+	double						mMusicTime;
 
 	// music player
 	bool						mPlayMusic;
@@ -214,6 +216,8 @@ void StarsApp::setup()
 	mMusicExtensions.push_back( ".mp3" );
 
 	mPlayMusic = true;
+	mMusicDelay = 60.0;
+	mMusicTime = getElapsedSeconds() - mMusicDelay;
 
 	// initialize the IrrKlang Sound Engine in a very safe way
 	mSoundEngine = shared_ptr<ISoundEngine>( createIrrKlangDevice(), std::mem_fun(&ISoundEngine::drop) );
@@ -228,9 +232,6 @@ void StarsApp::setup()
 			mSound->setIsPaused(false);
 		}
 
-		// play background music (the first .mp3 file found in ./assets/music)
-		fs::path path = getFirstFile( getAssetPath("") / "music" );
-		playMusic(path);
 	}
 
 	//
@@ -259,7 +260,9 @@ void StarsApp::update()
 	mTime += elapsed;
 
 	double time = getElapsedSeconds() / 200.0;
-	if(mSoundEngine && mMusic && mPlayMusic) time = mMusic->getPlayPosition() / (double) mMusic->getPlayLength();
+	if(mSoundEngine && mPlayMusic) {
+		time = mMusic ? mMusic->getPlayPosition() / (double) mMusic->getPlayLength() : 0.0;
+	}
 
 	// animate camera
 	mCamera.setDistanceTime(time);
@@ -285,8 +288,20 @@ void StarsApp::update()
 			vec3df(0,1,0) );
 
 		// if music has finished, play next track
-		if( mPlayMusic && mMusic && mMusic->isFinished() ) {
-			playMusic( getNextFile(mMusicPath) );
+		if( mPlayMusic ) {
+			if( !mMusic ) {
+				if( getElapsedSeconds() - mMusicTime > mMusicDelay ) {
+					// play background music (the first valid file found in ./assets/music)
+					fs::path path = getFirstFile( getAssetPath("") / "music" );
+					playMusic( getNextFile(path) );
+
+					mMusicTime += 5.0;
+				}
+			}
+			else if( mMusic->isFinished() ) {
+				mMusic.reset();
+				mMusicTime = getElapsedSeconds();
+			}
 		}
 	}
 }
@@ -359,7 +374,7 @@ void StarsApp::draw()
 
 		Vec3f right, up; cam.getBillboardVectors(&right, &up);
 		Vec3f forward = up.cross(right);
-		
+
 		// render sections
 		float offset = 0.5f * (mSectionCount - 1);
 		for(unsigned i=0;i<mSectionCount;++i)
@@ -445,7 +460,6 @@ void StarsApp::render()
 		mConstellationArt.draw();
 
 	// draw labels
-	if(mIsLabelsVisible) {
 		mLabels.draw();
 
 		if(mIsConstellationsVisible || mIsConstellationArtVisible) 
@@ -785,8 +799,8 @@ fs::path	StarsApp::getNextFile( const fs::path &current )
 		}
 	}
 
-	// failed, return empty path
-	return fs::path();
+	// failed, return first file in path
+	return getFirstFile( current.parent_path() );
 }
 
 fs::path	StarsApp::getPrevFile( const fs::path &current )
