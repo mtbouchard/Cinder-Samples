@@ -17,6 +17,7 @@ uniform bool		uHasNormalMap;
 uniform bool		uHasEmissiveMap;
 
 uniform bool		bShowNormalMap;
+uniform bool		bShowLights;
 
 uniform vec4		uScreenParams;
 
@@ -43,12 +44,12 @@ void main()
 		vec3	vReflect = normalize(-reflect(vToLight,vSurfaceNormal));
 
 		// calculate diffuse term
-		float	fDiffuse = max(dot(vSurfaceNormal,vToLight), 0.0);
+		float	fDiffuse = bShowLights ? max(dot(vSurfaceNormal,vToLight), 0.0) : 1.0;
 		fDiffuse = clamp(fDiffuse, 0.1, 1.0) * fAmbient;		// non-standard application of SSAO
 
 		// calculate specular term
 		float	fSpecularPower = 100.0;
-		float	fSpecular = pow( max( dot(vReflect, vToCamera), 0.0), fSpecularPower );
+		float	fSpecular = bShowLights ? pow( max( dot(vReflect, vToCamera), 0.0), fSpecularPower ) : 0.0;
 		fSpecular = clamp(fSpecular, 0.0, 1.0);
 
 		// calculate final colors

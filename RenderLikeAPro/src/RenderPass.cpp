@@ -553,6 +553,7 @@ void RenderPassComposite::render(const CameraPersp& camera)
 	getShader().bind();
 	getShader().uniform( "uScreenParams", screenParams );
 	getShader().uniform( "bShowNormalMap", bShowNormalMap );
+	getShader().uniform( "bShowLights", bShowLights );
 	getShader().unbind();
 
 	RenderPass::render(camera);

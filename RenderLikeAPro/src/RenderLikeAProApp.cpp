@@ -92,6 +92,7 @@ private:
 	bool				bEnableEmissiveMap;
 
 	bool				bEnableSSAO;
+	bool				bUseCBF;
 
 	bool				bShowWireframe;
 	bool				bShowNormalsAndTangents;
@@ -173,6 +174,7 @@ void RenderLikeAProApp::setup()
 	mParams->addParam( "Show Render Passes", &bShowRenderPasses );
 	mParams->addSeparator();
 	mParams->addParam( "Enable Ambient Occlusion", &bEnableSSAO );
+	mParams->addParam( "Enable Lights", &mPassComposite->bShowLights );
 	mParams->addParam( "Enable Diffuse Map", &mMesh->bUseDiffuseMap );
 	mParams->addParam( "Enable Specular Map", &mMesh->bUseSpecularMap );
 	mParams->addParam( "Enable Normal Map", &mMesh->bUseNormalMap );
@@ -205,6 +207,7 @@ void RenderLikeAProApp::setup()
 
 	bShowWireframe = false;
 	bEnableSSAO = true;
+	bUseCBF = true;
 	bShowNormalsAndTangents = false;
 	bShowRenderPasses = false;
 
@@ -253,7 +256,7 @@ void RenderLikeAProApp::update()
 
 void RenderLikeAProApp::draw()
 {
-	gl::clear( Color::black() ); 
+	gl::clear( Color::white() ); 
 	gl::color( Color::white() );
 
 	if(isInitialized())
@@ -349,8 +352,16 @@ void RenderLikeAProApp::resize()
 	// attach output textures to render pass inputs
 	mPassSSAO->attachTexture(0, mPassNormalDepth->getTexture(0));
 	mPassSSAO->attachTexture(1, mPassNormalDepth->getDepthTexture());
-	mPassCrossBilateralFilter->attachTexture(0, mPassSSAO->getTexture(0));	
-	mPassComposite->attachTexture(4, mPassCrossBilateralFilter->getTexture(0));
+
+	if(bUseCBF)
+	{
+		mPassCrossBilateralFilter->attachTexture(0, mPassSSAO->getTexture(0));
+		mPassComposite->attachTexture(4, mPassCrossBilateralFilter->getTexture(0));
+	}
+	else 
+	{
+		mPassComposite->attachTexture(4, mPassSSAO->getTexture(0));
+	}
 	mPassFXAA->attachTexture(0, mPassComposite->getTexture(0));
 }
 
@@ -378,6 +389,10 @@ void RenderLikeAProApp::keyDown( KeyEvent event )
 		break;
 	case KeyEvent::KEY_v:
 		gl::enableVerticalSync( !gl::isVerticalSyncEnabled() );
+		break;
+	case KeyEvent::KEY_b:
+		bUseCBF = !bUseCBF;
+		resize();
 		break;
 	}
 }

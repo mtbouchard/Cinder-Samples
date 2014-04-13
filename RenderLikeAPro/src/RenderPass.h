@@ -203,11 +203,13 @@ class RenderPassComposite : public RenderPass
 public:
 	RenderPassComposite(void) : 
 		RenderPass(),
-		bShowNormalMap(false)
+		bShowNormalMap(false),
+		bShowLights(true)
 	{ assert(false); /* not supported */ }
 	RenderPassComposite( const ci::gl::Fbo::Format& format ) : 
 		RenderPass(format),
-		bShowNormalMap(false)
+		bShowNormalMap(false),
+		bShowLights(true)
 	{}
 
 	static RenderPassCompositeRef create();
@@ -220,6 +222,7 @@ public:
 
 public:
 	bool bShowNormalMap;
+	bool bShowLights;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////
