@@ -293,7 +293,7 @@ void StarsApp::update()
 				if( getElapsedSeconds() - mMusicTime > mMusicDelay ) {
 					// play background music (the first valid file found in ./assets/music)
 					fs::path path = getFirstFile( getAssetPath("") / "music" );
-					playMusic( getNextFile(path) );
+					playMusic( path );
 
 					mMusicTime += 5.0;
 				}
@@ -353,7 +353,7 @@ void StarsApp::draw()
 		const float aspect = float(w) / float(h);
 		//const float hFoV = mSectionFovDegrees;
 		//const float vFoV = toDegrees( 2.0f * math<float>::atan( math<float>::tan( toRadians(hFoV) * 0.5f ) / aspect ) );
-		const float vFoV = mCamera.getFov();
+		const float vFoV = (float) mCamera.getFov();
 		const float hFoV = toDegrees( 2.0f * math<float>::atan( math<float>::tan( toRadians(vFoV) * 0.5f ) * aspect ) );
 
 		// bind the frame buffer object
@@ -460,6 +460,8 @@ void StarsApp::render()
 		mConstellationArt.draw();
 
 	// draw labels
+	if(mIsLabelsVisible)
+	{
 		mLabels.draw();
 
 		if(mIsConstellationsVisible || mIsConstellationArtVisible) 
@@ -756,6 +758,9 @@ void StarsApp::constrainCursor( const Vec2i &pos )
 
 fs::path	StarsApp::getFirstFile( const fs::path &path )
 {
+	if(path.empty())
+		return fs::path();
+
 	fs::directory_iterator end_itr;
 	for( fs::directory_iterator i( path ); i != end_itr; ++i )
 	{

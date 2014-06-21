@@ -61,7 +61,7 @@ void UserInterface::draw( const std::string &text )
 		gl::color( Color::white() );
 
 		Area viewport = gl::getViewport();
-		Vec2i position = Vec2i( 0.5f * viewport.getWidth(), 0.92f * viewport.getHeight() );	
+		Vec2i position = Vec2i( viewport.getWidth() / 2, viewport.getHeight() * 9 / 10 );	
 
 		gl::pushMatrices();
 		{
@@ -69,7 +69,7 @@ void UserInterface::draw( const std::string &text )
 
 			gl::translate( position );
 
-			float s = math<float>::min(1000.0f, viewport.getWidth()) / 1000.0f;
+			float s = math<float>::min(1000.0f, (float) viewport.getWidth()) / 1000.0f;
 			gl::scale( s, s );
 
 			gl::drawLine( Vec2f(-400, 0.5f), Vec2f(400, 0.5f) );

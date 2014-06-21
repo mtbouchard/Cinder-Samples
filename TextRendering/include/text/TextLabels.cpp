@@ -37,9 +37,9 @@ void TextLabels::clear()
 	mInvalid = true;
 }
 
-void TextLabels::addLabel( const Vec3f &position, const std::wstring &text )
+void TextLabels::addLabel( const Vec3f &position, const std::u16string &text )
 {
-	mLabels.insert( pair<Vec3f, std::wstring>( position, text ) );
+	mLabels.insert( pair<Vec3f, std::u16string>( position, text ) );
 	mInvalid = true;
 }
 
@@ -68,9 +68,9 @@ void TextLabels::renderMesh()
 	}
 }
 
-void TextLabels::renderString( const std::wstring &str, Vec2f *cursor, float stretch )
+void TextLabels::renderString( const std::u16string &str, Vec2f *cursor, float stretch )
 {
-	std::wstring::const_iterator itr;
+	std::u16string::const_iterator itr;
 	for(itr=str.begin();itr!=str.end();++itr) {
 		// retrieve character code
 		uint16_t id = (uint16_t) *itr;
